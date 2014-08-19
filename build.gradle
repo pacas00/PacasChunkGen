@@ -1,0 +1,153 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name = "forge"
+            url = "http://files.minecraftforge.net/maven"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.2-SNAPSHOT'
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'forge'
+
+def buildnumber = System.getenv("BUILD_NUMBER") ?: "dev"
+version = "v1.0." + buildnumber.toString()
+group= "net.petercashel.PacasChunkGen" // http://maven.apache.org/guides/mini/guide-naming-conventions.html
+archivesBaseName = "PacasChunkGen"
+
+def mavenpass = System.getenv("maven_pass") ?: "1"
+def mavenuser = System.getenv("maven_user") ?: "1"
+
+minecraft {
+    version = "1.7.10-10.13.0.1199"
+    assetDir = "eclipse/assets"
+    
+ //   replaceIn "PacasChunkGen.java"
+ //   replace "@VERSION@", project.version
+}
+
+dependencies {
+    compile files('lib/appliedenergistics2-rv0-stable-10-dev.jar');		// AE2 dev version (NEED TO FIND WORK AROUND)
+}
+
+processResources
+{
+    // replace stuff in mcmod.info, nothing else
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+                
+        // replace version and mcversion
+        expand 'version':project.version, 'mcversion':project.minecraft.version
+    }
+        
+    // copy everything else, thats not the mcmod.info
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+jar {
+    version = "${project.minecraft.version}-${project.version}"
+    classifier = 'universal'
+    
+}
+
+// Add in a source jar for people, should they desire to download such a thing
+task sourceJar(type: Jar) {
+	from sourceSets.main.allSource
+	classifier = 'src'
+    version = "${project.minecraft.version}-${project.version}"
+}
+
+// Add in an mcp named jar, for those who wish to run in a development environment (assuming mcp naming matches)
+task deobfJar(type: Jar) {
+	from sourceSets.main.output
+	classifier = 'deobf'
+    version = "${project.minecraft.version}-${project.version}"
+}
+
+
+task PomJar(type: Jar) {
+	from sourceSets.main.output
+	version = "${project.minecraft.version}-${project.version}"
+}
+
+
+// Tell the artifact system about our extra jars
+artifacts {
+	archives sourceJar, deobfJar, PomJar
+}
+
+task copyFiles(type: Copy) {
+    dependsOn 'reobf','PomJar'
+    
+    def inputFile = project.archivesBaseName + '-' + project.minecraft.version + '-' + project.version + '-universal.jar'
+    def outputFile = project.archivesBaseName + '-' + project.minecraft.version + '-' + project.version + '.jar'
+    
+    from ('build/libs/')
+    into ('build/libs/')
+    include (inputFile)
+    rename (inputFile, outputFile)
+}
+
+uploadArchives {
+    dependsOn 'reobf', 'copyFiles'
+    repositories {
+            logger.info('Publishing to files server')
+            
+            mavenDeployer {
+                repository(url: "http://117.120.47.2:8110/repository/internal/") {
+                    authentication(userName: mavenuser.toString(), password: mavenpass.toString())
+                }
+
+                // This is just the pom data for the maven repo
+                pom {
+                    groupId = project.group
+                    version = "${project.minecraft.version}-${project.version}"
+                    artifactId = project.archivesBaseName
+                    project {
+                        name project.archivesBaseName
+                        packaging 'jar'
+                        description 'PacasChunkGen'
+                        url 'https://github.com/pacas00/PacasChunkGen'
+
+                        scm {
+                            url 'https://github.com/pacas00/PacasChunkGen'
+                            connection 'scm:git:git://github.com/pacas00/PacasChunkGen.git'
+                            developerConnection 'scm:git:git@github.com:pacas00/PacasChunkGen.git'
+                        }
+
+                        issueManagement {
+                            system 'github'
+                            url 'https://github.com/pacas00/PacasChunkGen/issues'
+                        }
+
+                        licenses {
+                            license {
+                                name 'GNU Public License (GPL), Version 3.0'
+                                url 'http://www.gnu.org/licenses/gpl-3.0.txt'
+                                distribution 'repo'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id 'pacas00'
+                                name 'pacas00'
+                                roles { role 'developer' }
+                            }
+                        }
+                    }
+                }
+            }
+        
+    }
+}
