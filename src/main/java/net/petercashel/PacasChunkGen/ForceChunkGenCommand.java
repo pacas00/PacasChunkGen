@@ -64,6 +64,7 @@ public class ForceChunkGenCommand extends CommandBase {
 		int zmin = Integer.parseInt(args[2])/ 16;
 		int zmax = Integer.parseInt(args[3])/ 16;
 
+		FMLLog.bigWarning("WARNING! GENERATING CHUNKS! THIS MAY TAKE A LONG TIME AND WILL LOG EVERYTHING!",new Object());
 		thread = new ChunkGenThread(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, xmin, xmax, zmin, zmax, sender);
 		thread.start();
 
@@ -107,24 +108,24 @@ public class ForceChunkGenCommand extends CommandBase {
 		}
 
 		public void run(){
-			System.out.println("MyThread running");
 			for (int x = xmin; x < xmax; x++) {
 				for (int z = zmin; z < zmax; z++) {
-
-					Runnable r = new CallbackRunnable(x, z);
-					//FMLLog.warning("Generating - X" + x + " Z" + z,new Object());
-					Running = true;
-					net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-					ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
-					while (Running){
-						try {
-							Thread.sleep(100);
-						} catch (InterruptedException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+					if (!chunkloader.chunkExists(worldserver, x, z)) {
+						Runnable r = new CallbackRunnable(x, z);
+						Running = true;
+						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
+						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
+						while (Running){
+							try {
+								Thread.sleep(100);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
 						}
+					} else {
+						FMLLog.info("Skipping X" + x + " Z" + z,new Object());
 					}
-				}			
+				}		
 			}
 			FMLLog.warning("Finished Running",new Object());
 			sender.addChatMessage(new ChatComponentText("Finished Running"));
@@ -141,7 +142,7 @@ public class ForceChunkGenCommand extends CommandBase {
 			}
 
 			public void run(){
-				FMLLog.warning("Done X" + x + " Z" + z,new Object());
+				FMLLog.info("Done X" + x + " Z" + z,new Object());
 				net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = false;
 				Running = false;
 			}
