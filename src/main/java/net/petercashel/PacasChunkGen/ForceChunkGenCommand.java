@@ -65,7 +65,7 @@ public class ForceChunkGenCommand extends CommandBase {
 		int zmax = Integer.parseInt(args[3])/ 16;
 
 		FMLLog.bigWarning("WARNING! GENERATING CHUNKS! THIS MAY TAKE A LONG TIME AND WILL LOG EVERYTHING!",new Object());
-		thread = new ChunkGenThread(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, xmin, xmax, zmin, zmax, sender);
+		thread = new ChunkGenThread(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, xmin, xmax, zmin, zmax);
 		thread.start();
 
 
@@ -90,13 +90,12 @@ public class ForceChunkGenCommand extends CommandBase {
 		private int xmax;
 		private int zmin;
 		private int zmax;
-		private ICommandSender sender;
 		private WorldServer worldserver;
 		public static boolean Running = false;
 
 		public ChunkGenThread(WorldServer worldserver,
 				AnvilChunkLoader chunkloader,
-				ChunkProviderServer theChunkProviderServer, int xmin, int xmax, int zmin, int zmax, ICommandSender sender) {
+				ChunkProviderServer theChunkProviderServer, int xmin, int xmax, int zmin, int zmax) {
 			this.worldserver = worldserver;
 			this.chunkloader = chunkloader;
 			this.theChunkProviderServer = theChunkProviderServer;
@@ -104,7 +103,6 @@ public class ForceChunkGenCommand extends CommandBase {
 			this.xmax = xmax;
 			this.zmin = zmin;
 			this.zmax = zmax;
-			this.sender = sender;
 		}
 
 		public void run(){
@@ -127,8 +125,7 @@ public class ForceChunkGenCommand extends CommandBase {
 					}
 				}		
 			}
-			FMLLog.warning("Finished Running",new Object());
-			sender.addChatMessage(new ChatComponentText("Finished Running"));
+			FMLLog.info("Finished Running",new Object());
 		}
 
 		public class CallbackRunnable implements Runnable {
