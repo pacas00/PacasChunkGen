@@ -57,9 +57,7 @@ processResources
 jar {
     version = "${project.minecraft.version}-${project.version}"
     classifier = 'universal'
-    manifest {
-        attributes("FMLCorePlugin": "net.petercashel.PacasChunkGen.PacasChunkGenFMLLoadingPlugin", "FMLCorePluginContainsFMLMod": "PacasChunkGen")
-    }
+    
 }
 
 // Add in a source jar for people, should they desire to download such a thing
