@@ -43,7 +43,7 @@ public class PacasChunkGenClassTransformer implements net.minecraft.launchwrappe
 		String targetMethodName = "";
 		
 		if(obfuscated == true) {
-			targetMethodName ="d";
+			targetMethodName ="func_73156_b";
 		} else {
 			targetMethodName ="unloadQueuedChunks";
 		}
