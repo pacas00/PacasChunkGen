@@ -1,5 +1,9 @@
 package net.petercashel.PacasChunkGen;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 import cpw.mods.fml.common.FMLLog;
 import cpw.mods.fml.common.Loader;
 import cpw.mods.fml.common.ModContainer;
@@ -45,6 +49,7 @@ public class ForceChunkGenCommand extends CommandBase {
 
 	@Override
 	public void processCommand(ICommandSender sender, String[] args) {
+
 		MinecraftServer server = MinecraftServer.getServer();
 		WorldServer worldserver = server.worldServerForDimension(0);
 		IChunkLoader chunkloader = worldserver.theChunkProviderServer.currentChunkLoader;
@@ -106,6 +111,7 @@ public class ForceChunkGenCommand extends CommandBase {
 		}
 
 		public void run(){
+			ArrayList<ChunkPair> failed = new ArrayList<ChunkPair>();
 			for (int x = xmin; x < xmax; x++) {
 				for (int z = zmin; z < zmax; z++) {
 					if (!chunkloader.chunkExists(worldserver, x, z)) {
@@ -113,9 +119,16 @@ public class ForceChunkGenCommand extends CommandBase {
 						Running = true;
 						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
 						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
+						int count = 0;
 						while (Running){
 							try {
 								Thread.sleep(100);
+								count++;
+								if (count > 50) {
+									ChunkPair pair = new ChunkPair(x,z);
+									failed.add(pair);
+									Running = false;
+								}
 							} catch (InterruptedException e) {
 								e.printStackTrace();
 							}
@@ -124,6 +137,32 @@ public class ForceChunkGenCommand extends CommandBase {
 						FMLLog.info("Skipping X" + x + " Z" + z,new Object());
 					}
 				}		
+			}
+			if (failed.size() > 0) {
+				Iterator itr = failed.iterator();
+				while (itr.hasNext()) {
+					ChunkPair p = (ChunkPair) itr.next();
+					int x = p.x;
+					int z = p.z;
+					Runnable r = new CallbackRunnable(x, z);
+					Running = true;
+					net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
+					ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
+					int count = 0;
+					while (Running){
+						try {
+							Thread.sleep(100);
+							count++;
+							if (count > 80) {
+								FMLLog.info("Chunk X" + x + " Z" + z + " Failed on second attempt!",new Object());
+								Running = false;
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					
+				}
 			}
 			FMLLog.info("Finished Running",new Object());
 		}
@@ -144,6 +183,14 @@ public class ForceChunkGenCommand extends CommandBase {
 				Running = false;
 			}
 		}
+		
+		public class ChunkPair {
+			  int x;
+			  int z;
+			  ChunkPair(int x, int z) {this.x=x;this.z=z;}
+			}
 	}
+	
+	
 
 }
