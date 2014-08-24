@@ -16,9 +16,6 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.storage.AnvilChunkLoader;
 import net.minecraft.world.chunk.storage.IChunkLoader;
 import net.minecraft.world.gen.ChunkProviderServer;
-import net.minecraftforge.common.ForgeChunkManager;
-import net.minecraftforge.common.ForgeChunkManager.Ticket;
-import net.minecraftforge.common.chunkio.ChunkIOExecutor;
 
 public class ForceChunkGenCommand extends CommandBase {
 
@@ -120,11 +117,27 @@ public class ForceChunkGenCommand extends CommandBase {
 							FMLLog.info("ABORTED CHUNK GEN",new Object());
 							return;
 						}
-						Runnable r = new CallbackRunnable(theChunkProviderServer, x, z);
+						CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 						Running = true;
 						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
+						theChunkProviderServer.loadChunk(x, z, r);
 						int count = 0;
+						while (Running){
+							try {
+								Thread.sleep(100);
+								count++;
+								if (count > 500) { //was 50, now 500
+									ChunkPair pair = new ChunkPair(x,z);
+									failed.add(pair);
+									Running = false;
+								}
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+						r.finish = true;
+						theChunkProviderServer.loadChunk(x, z, r);
+						count = 0;
 						while (Running){
 							try {
 								Thread.sleep(100);
@@ -149,11 +162,26 @@ public class ForceChunkGenCommand extends CommandBase {
 					ChunkPair p = (ChunkPair) itr.next();
 					int x = p.x;
 					int z = p.z;
-					Runnable r = new CallbackRunnable(theChunkProviderServer, x, z);
+					CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 					Running = true;
 					net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-					ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
+					theChunkProviderServer.loadChunk(x, z, r);
 					int count = 0;
+					while (Running){
+						try {
+							Thread.sleep(100);
+							count++;
+							if (count > 80) {
+								FMLLog.info("Chunk X" + x + " Z" + z + " Failed on second attempt!",new Object());
+								Running = false;
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					r.finish = true;
+					theChunkProviderServer.loadChunk(x, z, r);
+					count = 0;
 					while (Running){
 						try {
 							Thread.sleep(100);
@@ -177,6 +205,7 @@ public class ForceChunkGenCommand extends CommandBase {
 			private int x;
 			private int z;
 			private ChunkProviderServer theChunkProviderServer;
+			public boolean finish = false;
 
 			public CallbackRunnable(ChunkProviderServer theChunkProviderServer, int x, int z) {
 				this.x = x;
@@ -185,8 +214,7 @@ public class ForceChunkGenCommand extends CommandBase {
 			}
 
 			public void run(){
-				theChunkProviderServer.populate(theChunkProviderServer, x, z);
-				FMLLog.info("Done X" + x + " Z" + z,new Object());
+				if (finish)FMLLog.info("Done X" + x + " Z" + z,new Object());
 				net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = false;
 				Running = false;
 			}
