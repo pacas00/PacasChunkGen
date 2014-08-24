@@ -23,6 +23,7 @@ public class PacasChunkGen implements LoadingCallback{
 
 	private MinecraftServer server;
 	private ForceChunkGenCommand ForceChunkGenCMD;
+	private CancelChunkGenCommand CancelChunkGenCMD;
 
 	public static boolean doNextLoad;
 
@@ -39,6 +40,8 @@ public class PacasChunkGen implements LoadingCallback{
 		ServerCommandManager commands = (ServerCommandManager) server.getCommandManager();
 		ForceChunkGenCMD = new ForceChunkGenCommand(this);
 		commands.registerCommand(ForceChunkGenCMD);
+		CancelChunkGenCMD = new CancelChunkGenCommand(this);
+		commands.registerCommand(CancelChunkGenCMD);
 	}
 
 	@Override

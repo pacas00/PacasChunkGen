@@ -49,18 +49,18 @@ public class ForceChunkGenCommand extends CommandBase {
 
 	@Override
 	public void processCommand(ICommandSender sender, String[] args) {
-
+		
 		MinecraftServer server = MinecraftServer.getServer();
 		WorldServer worldserver = server.worldServerForDimension(0);
 		IChunkLoader chunkloader = worldserver.theChunkProviderServer.currentChunkLoader;
 
 		try {
 			if (args[0] == null || args[1] == null || args[2] == null || args[3] == null) {
-				sender.addChatMessage(new ChatComponentText("ForceChunkGen X_Min X_Max Z_Min Z_Max"));
+				sender.addChatMessage(new ChatComponentText("/ForceChunkGen X_Min X_Max Z_Min Z_Max"));
 				return;
 			}
-		} catch (NullPointerException e) {
-			sender.addChatMessage(new ChatComponentText("ForceChunkGen X_Min X_Max Z_Min Z_Max"));
+		} catch (ArrayIndexOutOfBoundsException e) {
+			sender.addChatMessage(new ChatComponentText("/ForceChunkGen X_Min X_Max Z_Min Z_Max"));
 			return;
 		}
 
@@ -70,11 +70,11 @@ public class ForceChunkGenCommand extends CommandBase {
 		int zmax = Integer.parseInt(args[3])/ 16;
 
 		FMLLog.bigWarning("WARNING! GENERATING CHUNKS! THIS MAY TAKE A LONG TIME AND WILL LOG EVERYTHING!",new Object());
+		thread = null;
 		thread = new ChunkGenThread(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, xmin, xmax, zmin, zmax);
+		thread.ABORT = false;
+		thread.Running = false;
 		thread.start();
-
-
-
 	}
 
 	public ModContainer findContainerFor(Object mod)
@@ -97,6 +97,7 @@ public class ForceChunkGenCommand extends CommandBase {
 		private int zmax;
 		private WorldServer worldserver;
 		public static boolean Running = false;
+		public static boolean ABORT = false;
 
 		public ChunkGenThread(WorldServer worldserver,
 				AnvilChunkLoader chunkloader,
@@ -115,7 +116,11 @@ public class ForceChunkGenCommand extends CommandBase {
 			for (int x = xmin; x < xmax; x++) {
 				for (int z = zmin; z < zmax; z++) {
 					if (!chunkloader.chunkExists(worldserver, x, z)) {
-						Runnable r = new CallbackRunnable(x, z);
+						if (ABORT) {
+							FMLLog.info("ABORTED CHUNK GEN",new Object());
+							return;
+						}
+						Runnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 						Running = true;
 						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
 						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
@@ -124,7 +129,7 @@ public class ForceChunkGenCommand extends CommandBase {
 							try {
 								Thread.sleep(100);
 								count++;
-								if (count > 50) {
+								if (count > 500) { //was 50, now 500
 									ChunkPair pair = new ChunkPair(x,z);
 									failed.add(pair);
 									Running = false;
@@ -144,7 +149,7 @@ public class ForceChunkGenCommand extends CommandBase {
 					ChunkPair p = (ChunkPair) itr.next();
 					int x = p.x;
 					int z = p.z;
-					Runnable r = new CallbackRunnable(x, z);
+					Runnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 					Running = true;
 					net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
 					ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
@@ -171,13 +176,16 @@ public class ForceChunkGenCommand extends CommandBase {
 
 			private int x;
 			private int z;
+			private ChunkProviderServer theChunkProviderServer;
 
-			public CallbackRunnable(int x, int z) {
+			public CallbackRunnable(ChunkProviderServer theChunkProviderServer, int x, int z) {
 				this.x = x;
 				this.z = z;
+				this.theChunkProviderServer = theChunkProviderServer;
 			}
 
 			public void run(){
+				theChunkProviderServer.populate(theChunkProviderServer, x, z);
 				FMLLog.info("Done X" + x + " Z" + z,new Object());
 				net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = false;
 				Running = false;
