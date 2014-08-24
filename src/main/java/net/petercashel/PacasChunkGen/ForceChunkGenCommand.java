@@ -16,6 +16,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraft.world.chunk.storage.AnvilChunkLoader;
 import net.minecraft.world.chunk.storage.IChunkLoader;
 import net.minecraft.world.gen.ChunkProviderServer;
+import net.minecraftforge.common.chunkio.ChunkIOExecutor;
 
 public class ForceChunkGenCommand extends CommandBase {
 
@@ -62,7 +63,7 @@ public class ForceChunkGenCommand extends CommandBase {
 		}
 		
 		try {
-			if (args[5] == null) {
+			if (args[4] == null) {
 				sender.addChatMessage(new ChatComponentText("WARNING! THIS WILL LAG OR CRASH THE SERVER!"));
 				sender.addChatMessage(new ChatComponentText("If you acknoledge this is dangerous and can destroy your world,"));
 				sender.addChatMessage(new ChatComponentText("add yes to the end of the command."));
@@ -134,7 +135,7 @@ public class ForceChunkGenCommand extends CommandBase {
 						CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 						Running = true;
 						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-						theChunkProviderServer.loadChunk(x, z, r);
+						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
 						int count = 0;
 						while (Running){
 							try {
@@ -164,7 +165,7 @@ public class ForceChunkGenCommand extends CommandBase {
 						CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
 						Running = true;
 						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-						theChunkProviderServer.loadChunk(x, z, r);
+						ChunkIOExecutor.queueChunkLoad(worldserver, (AnvilChunkLoader)chunkloader, worldserver.theChunkProviderServer, ((int)x), ((int)z), r);
 						int count = 0;
 						while (Running){
 							try {
