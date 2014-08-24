@@ -46,7 +46,7 @@ public class ForceChunkGenCommand extends CommandBase {
 
 	@Override
 	public void processCommand(ICommandSender sender, String[] args) {
-		
+
 		MinecraftServer server = MinecraftServer.getServer();
 		WorldServer worldserver = server.worldServerForDimension(0);
 		IChunkLoader chunkloader = worldserver.theChunkProviderServer.currentChunkLoader;
@@ -58,6 +58,20 @@ public class ForceChunkGenCommand extends CommandBase {
 			}
 		} catch (ArrayIndexOutOfBoundsException e) {
 			sender.addChatMessage(new ChatComponentText("/ForceChunkGen X_Min X_Max Z_Min Z_Max"));
+			return;
+		}
+		
+		try {
+			if (args[5] == null) {
+				sender.addChatMessage(new ChatComponentText("WARNING! THIS WILL LAG OR CRASH THE SERVER!"));
+				sender.addChatMessage(new ChatComponentText("If you acknoledge this is dangerous and can destroy your world,"));
+				sender.addChatMessage(new ChatComponentText("add yes to the end of the command."));
+				return;
+			}
+		} catch (ArrayIndexOutOfBoundsException e) {
+			sender.addChatMessage(new ChatComponentText("WARNING! THIS WILL LAG OR CRASH THE SERVER!"));
+			sender.addChatMessage(new ChatComponentText("If you acknoledge this is dangerous and can destroy your world,"));
+			sender.addChatMessage(new ChatComponentText("add yes to the end of the command."));
 			return;
 		}
 
@@ -135,22 +149,6 @@ public class ForceChunkGenCommand extends CommandBase {
 								e.printStackTrace();
 							}
 						}
-						r.finish = true;
-						theChunkProviderServer.loadChunk(x, z, r);
-						count = 0;
-						while (Running){
-							try {
-								Thread.sleep(100);
-								count++;
-								if (count > 500) { //was 50, now 500
-									ChunkPair pair = new ChunkPair(x,z);
-									failed.add(pair);
-									Running = false;
-								}
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}
-						}
 					} else {
 						FMLLog.info("Skipping X" + x + " Z" + z,new Object());
 					}
@@ -162,39 +160,25 @@ public class ForceChunkGenCommand extends CommandBase {
 					ChunkPair p = (ChunkPair) itr.next();
 					int x = p.x;
 					int z = p.z;
-					CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
-					Running = true;
-					net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
-					theChunkProviderServer.loadChunk(x, z, r);
-					int count = 0;
-					while (Running){
-						try {
-							Thread.sleep(100);
-							count++;
-							if (count > 80) {
-								FMLLog.info("Chunk X" + x + " Z" + z + " Failed on second attempt!",new Object());
-								Running = false;
+					if (!chunkloader.chunkExists(worldserver, x, z)) {
+						CallbackRunnable r = new CallbackRunnable(theChunkProviderServer, x, z);
+						Running = true;
+						net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = true;
+						theChunkProviderServer.loadChunk(x, z, r);
+						int count = 0;
+						while (Running){
+							try {
+								Thread.sleep(100);
+								count++;
+								if (count > 80) {
+									FMLLog.info("Chunk X" + x + " Z" + z + " Failed on second attempt!",new Object());
+									Running = false;
+								}
+							} catch (InterruptedException e) {
+								e.printStackTrace();
 							}
-						} catch (InterruptedException e) {
-							e.printStackTrace();
 						}
 					}
-					r.finish = true;
-					theChunkProviderServer.loadChunk(x, z, r);
-					count = 0;
-					while (Running){
-						try {
-							Thread.sleep(100);
-							count++;
-							if (count > 80) {
-								FMLLog.info("Chunk X" + x + " Z" + z + " Failed on second attempt!",new Object());
-								Running = false;
-							}
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}
-					}
-					
 				}
 			}
 			FMLLog.info("Finished Running",new Object());
@@ -205,7 +189,6 @@ public class ForceChunkGenCommand extends CommandBase {
 			private int x;
 			private int z;
 			private ChunkProviderServer theChunkProviderServer;
-			public boolean finish = false;
 
 			public CallbackRunnable(ChunkProviderServer theChunkProviderServer, int x, int z) {
 				this.x = x;
@@ -214,19 +197,19 @@ public class ForceChunkGenCommand extends CommandBase {
 			}
 
 			public void run(){
-				if (finish)FMLLog.info("Done X" + x + " Z" + z,new Object());
+				FMLLog.info("Done X" + x + " Z" + z,new Object());
 				net.petercashel.PacasChunkGen.ForceChunkGenCommand.ChunkGenThread.Running = false;
 				Running = false;
 			}
 		}
-		
+
 		public class ChunkPair {
-			  int x;
-			  int z;
-			  ChunkPair(int x, int z) {this.x=x;this.z=z;}
-			}
+			int x;
+			int z;
+			ChunkPair(int x, int z) {this.x=x;this.z=z;}
+		}
 	}
-	
-	
+
+
 
 }
